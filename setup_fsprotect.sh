@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# File: fsprotect-menu.sh
-# Menu interaktif untuk install/enable/disable/uninstall fsprotect
+if (( $EUID != 0 )); then
+    echo "Please run as root"
+    echo "You can Try comand 'su root' or 'sudo -i' or 'sudo -'"
+    exit 1
+fi
 
 FS_CONF="/etc/default/fsprotect"
 HOOK_FILE="/etc/initramfs-tools/hooks/fsprotect"
