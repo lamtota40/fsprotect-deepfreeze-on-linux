@@ -1,101 +1,66 @@
 #!/bin/bash
 
-if (( $EUID != 0 )); then
-    echo "Please run as root"
-    echo "You can Try comand 'su root' or 'sudo -i' or 'sudo -'"
-    exit 1
-fi
+# Menu sederhana untuk mengelola overlayroot sebagai pengganti fsprotect
 
-FS_CONF="/etc/default/fsprotect"
-HOOK_FILE="/etc/initramfs-tools/hooks/fsprotect"
-CACHE_DIR="/fsprotect-cache"
+set -e
+
+overlay_conf="/etc/overlayroot.conf"
 
 check_status() {
-    if dpkg -s fsprotect &>/dev/null; then
-        if [[ -f $FS_CONF && $(grep -c '^FS_PROTECT_PARTITIONS=' $FS_CONF) -gt 0 ]]; then
-            echo "Enabled"
-        else
-            echo "Installed, but Disabled"
-        fi
+    if grep -q '^overlayroot=' "$overlay_conf" 2>/dev/null; then
+        echo "Enabled"
+    elif [[ -f "$overlay_conf" ]]; then
+        echo "Disabled"
     else
         echo "Not Installed"
     fi
 }
 
-install_fsprotect() {
-    echo "=> Menginstal fsprotect..."
-    apt update && apt install -y fsprotect
-    echo "   fsprotect terinstal."
+install_overlayroot() {
+    echo "> Installing overlayroot..."
+    apt update && apt install -y overlayroot
+    echo "overlayroot installed."
 }
 
-enable_fsprotect() {
-    if ! dpkg -s fsprotect &>/dev/null; then
-        echo "   fsprotect belum terinstal. Pilih menu Install dulu."
-        return
-    fi
-
-    echo "=> Mengaktifkan fsprotect..."
-    # buat cache di luar overlay
-    mkdir -p "$CACHE_DIR"
-    chmod 777 "$CACHE_DIR"
-
-    # tulis konfigurasi
-    cat <<EOF > "$FS_CONF"
-FS_PROTECT_PARTITIONS="/"
-FS_PROTECT_USE_TMPFS=no
-FS_PROTECT_CACHEDIR="$CACHE_DIR"
-EOF
-
-    # regenerasi initramfs, paket hook bawaan akan jalan
-    update-initramfs -u
-    echo "   fsprotect berhasil di-enable. Silakan reboot."
+enable_overlayroot() {
+    echo "> Enabling overlayroot..."
+    echo 'overlayroot="tmpfs"' > "$overlay_conf"
+    echo "overlayroot enabled. Please reboot to take effect."
 }
 
-disable_fsprotect() {
-    echo "=> Menonaktifkan fsprotect..."
-    [[ -f $FS_CONF ]] && rm -f "$FS_CONF"
-    update-initramfs -u
-    echo "   fsprotect dinonaktifkan. Silakan reboot."
+disable_overlayroot() {
+    echo "> Disabling overlayroot..."
+    echo 'overlayroot="disabled"' > "$overlay_conf"
+    echo "overlayroot disabled. Please reboot to take effect."
 }
 
-uninstall_fsprotect() {
-    echo "=> Menghapus fsprotect sepenuhnya..."
-    # hapus paket
-    apt remove --purge -y fsprotect
-    # hapus direktori cache
-    rm -rf "$CACHE_DIR"
-    # hapus config jika ada
-    [[ -f $FS_CONF ]] && rm -f "$FS_CONF"
-    # hapus hook yang dibuat manual jika ada
-    [[ -f $HOOK_FILE ]] && rm -f "$HOOK_FILE"
-    # regenerasi initramfs
-    update-initramfs -u
-    echo "   fsprotect berhasil di-uninstall."
+uninstall_overlayroot() {
+    echo "> Uninstalling overlayroot..."
+    apt purge -y overlayroot
+    rm -f "$overlay_conf"
+    echo "overlayroot uninstalled."
 }
 
+# Menu utama
 while true; do
-    clear
-    echo "========================="
-    echo "    Menu FS PROTECT"
-    echo " (Deepfreeze on Linux)"
-    echo "========================="
+    echo "\n==============="
+    echo "Menu OVERLAYROOT"
+    echo "==============="
     echo "Status: $(check_status)"
-    echo ""
-    echo "1) Install FS PROTECT"
-    echo "2) Enable  FS PROTECT"
-    echo "3) Disable FS PROTECT"
-    echo "4) Uninstall FS PROTECT"
-    echo "0) Exit"
-    echo ""
-    read -p "Pilihan Anda: " opt
-    case $opt in
-        1) install_fsprotect ;; 
-        2) enable_fsprotect ;; 
-        3) disable_fsprotect ;; 
-        4) uninstall_fsprotect ;; 
-        0) exit 0 ;; 
-        *) echo "  Opsi tidak dikenal!" ;; 
+    echo
+    echo "1. Install OverlayRoot"
+    echo "2. Enable FREEZE"
+    echo "3. Disable FREEZE"
+    echo "4. Uninstall OverlayRoot"
+    echo "0. Exit"
+    read -p "Silahkan input pilihan anda: " opsi
+
+    case $opsi in
+        1) install_overlayroot ;;
+        2) enable_overlayroot ;;
+        3) disable_overlayroot ;;
+        4) uninstall_overlayroot ;;
+        0) exit 0 ;;
+        *) echo "Pilihan tidak valid." ;;
     esac
-    echo ""
-    read -p "Tekan [Enter] untuk kembali ke menu..."
 done
