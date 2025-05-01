@@ -2,5 +2,6 @@
 deepfreeze on linux
 
 ```console
-apt update && apt upgrade -y
+wget https://raw.githubusercontent.com/lamtota40/fsprotect-deepfreeze-on-linux/refs/heads/main/setup_fsprotect.sh
+bash setup_fsprotect.sh
 ```
